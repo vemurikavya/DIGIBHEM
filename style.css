@@ -80,7 +80,20 @@ form button:hover {
 }
 
 .todo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 0rem 0.5rem;
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.todo-time {
+    font-size: 0.8em;
+    color: gray;
 }
 
 .trash-btn, 
@@ -94,7 +107,7 @@ form button:hover {
 }
 
 .edit-btn {
-    background:lightgoldenrodyellow;
+    background: lightgoldenrodyellow;
     margin-right: 5px;
 }
 
@@ -182,11 +195,4 @@ select {
     border-radius: 50%;
     background-color: #fff;
     margin: 5px;
-}
-.todo-item {
-    padding: 0rem 0.5rem;
-    border: none;
-    outline: none;
-    background: transparent;
-    width: 100%;
 }
