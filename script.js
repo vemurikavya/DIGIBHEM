@@ -12,6 +12,10 @@ function addTodo(event) {
     event.preventDefault();
     if (todoInput.value.trim() === "") return; // Prevent adding empty tasks
 
+    // Get the current date and time
+    const now = new Date();
+    const dateTime = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
     const todoDiv = document.createElement("div");
     todoDiv.classList.add("todo");
 
@@ -21,10 +25,14 @@ function addTodo(event) {
     checkbox.classList.add("complete-checkbox");
     todoDiv.appendChild(checkbox);
 
-    const newTodo = document.createElement("li");
-    newTodo.innerText = todoInput.value;
-    newTodo.classList.add("todo-item");
-    todoDiv.appendChild(newTodo);
+    // Create todo item with date and time
+    const todoItem = document.createElement("li");
+    todoItem.innerHTML = `
+        <span class="todo-text">${todoInput.value}</span>
+        <span class="todo-time">${dateTime}</span>
+    `;
+    todoItem.classList.add("todo-item");
+    todoDiv.appendChild(todoItem);
 
     // Add edit button
     const editButton = document.createElement("button");
@@ -41,13 +49,14 @@ function addTodo(event) {
     todoList.appendChild(todoDiv);
     todoInput.value = "";
 
-    saveLocalTodos(todoInput.value);
+    saveLocalTodos(todoInput.value, dateTime);
 }
 
 function handleTodoAction(e) {
     const item = e.target;
     const todo = item.closest(".todo");
-    const todoText = todo.querySelector(".todo-item");
+    const todoText = todo.querySelector(".todo-text").innerText;
+    const todoItem = todo.querySelector(".todo-item");
 
     if (item.classList.contains("trash-btn")) {
         todo.classList.add("slide");
@@ -58,20 +67,29 @@ function handleTodoAction(e) {
     }
 
     if (item.classList.contains("edit-btn")) {
-        const newText = prompt("Edit your task:", todoText.innerText);
-        if (newText && newText.trim() !== "" && newText !== todoText.innerText) {
-            todoText.innerText = newText;
-            updateLocalTodos(todoText.innerText, newText);
+        const newText = prompt("Edit your task:", todoText);
+        if (newText && newText.trim() !== "" && newText !== todoText) {
+            todo.querySelector(".todo-text").innerText = newText;
+            updateLocalTodos(todoText, newText);
             
             // Remove any box around the edited task name
-            todoText.style.border = "none";
-            todoText.style.outline = "none";
+            todo.querySelector(".todo-text").style.border = "none";
+            todo.querySelector(".todo-text").style.outline = "none";
         }
     }
 
     if (item.classList.contains("complete-checkbox")) {
+        const now = new Date();
+        const completionTime = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
         todo.classList.toggle("completed");
-        updateLocalTodos(todoText.innerText, todoText.innerText); // Just to update the local storage
+
+        if (todo.classList.contains("completed")) {
+            todo.querySelector(".todo-time").innerText += ` (Completed at: ${completionTime})`;
+        } else {
+            const timeSpan = todo.querySelector(".todo-time");
+            timeSpan.innerText = timeSpan.innerText.split(" (")[0]; // Remove the completion timestamp
+        }
+        updateLocalTodos(todoText, todo.querySelector(".todo-text").innerText, todo.classList.contains("completed") ? completionTime : "");
     }
 }
 
@@ -100,9 +118,9 @@ function filterTodo(e) {
     });
 }
 
-function saveLocalTodos(todo) {
+function saveLocalTodos(todo, dateTime, completionTime = "") {
     let todos = JSON.parse(localStorage.getItem("todos")) || [];
-    todos.push(todo);
+    todos.push({ text: todo, dateTime: dateTime, completionTime: completionTime });
     localStorage.setItem("todos", JSON.stringify(todos));
 }
 
@@ -114,7 +132,7 @@ function getLocalTodos() {
     }
 
     todos.forEach(function(todo) {
-        if (typeof todo === 'string' && todo.trim() !== '') {
+        if (typeof todo.text === 'string' && todo.text.trim() !== '') {
             const todoDiv = document.createElement("div");
             todoDiv.classList.add("todo");
 
@@ -124,11 +142,14 @@ function getLocalTodos() {
             checkbox.classList.add("complete-checkbox");
             todoDiv.appendChild(checkbox);
 
-            // Create and add todo text
-            const newTodo = document.createElement("li");
-            newTodo.innerText = todo;
-            newTodo.classList.add("todo-item");
-            todoDiv.appendChild(newTodo);
+            // Create and add todo text with date and time
+            const todoItem = document.createElement("li");
+            todoItem.innerHTML = `
+                <span class="todo-text">${todo.text}</span>
+                <span class="todo-time">${todo.dateTime}${todo.completionTime ? ` (Completed at: ${todo.completionTime})` : ""}</span>
+            `;
+            todoItem.classList.add("todo-item");
+            todoDiv.appendChild(todoItem);
 
             // Add edit button
             const editButton = document.createElement("button");
@@ -142,6 +163,11 @@ function getLocalTodos() {
             trashButton.classList.add("trash-btn");
             todoDiv.appendChild(trashButton);
 
+            // Mark as completed if applicable
+            if (todo.completionTime) {
+                todoDiv.classList.add("completed");
+            }
+
             todoList.appendChild(todoDiv);
         }
     });
@@ -149,16 +175,13 @@ function getLocalTodos() {
 
 function removeLocalTodos(todo) {
     let todos = JSON.parse(localStorage.getItem("todos")) || [];
-    const todoText = todo.querySelector(".todo-item").innerText;
-    todos = todos.filter(item => item !== todoText);
+    const todoText = todo.querySelector(".todo-text").innerText;
+    todos = todos.filter(item => item.text !== todoText);
     localStorage.setItem("todos", JSON.stringify(todos));
 }
 
-function updateLocalTodos(oldText, newText) {
+function updateLocalTodos(oldText, newText, completionTime = "") {
     let todos = JSON.parse(localStorage.getItem("todos")) || [];
-    const index = todos.indexOf(oldText);
-    if (index > -1) {
-        todos[index] = newText;
-        localStorage.setItem("todos", JSON.stringify(todos));
-    }
+    todos = todos.map(item => item.text === oldText ? { ...item, text: newText, completionTime: completionTime } : item);
+    localStorage.setItem("todos", JSON.stringify(todos));
 }
